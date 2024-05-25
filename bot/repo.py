@@ -296,6 +296,7 @@ class RuStockIndex(MainTicker):
         self.secname = self.security.get('SECNAME')
         self.capitalization = self.security.get('CAPITALIZATION')
         self.previous_close = self.security.get('LASTVALUE')
+        self.year_low, self.year_high = self.get_year_low_high()
     
     async def build_graph(self, period=None):
         data = await self.get_historical_data_async()
@@ -323,6 +324,16 @@ class RuStockIndex(MainTicker):
         df.index = pd.to_datetime(df.index)
         df.index = pd.to_datetime(df.index).tz_localize(None)
         return df
+    
+    def get_year_low_high(self):
+        df = self.get_historical_data()
+        start_date = datetime.today()
+        end_date = (start_date - timedelta(days=365))
+        one_year_df = df.loc[(df.index >= end_date) & (df.index <= start_date)]
+        high_52_weeks = pd.to_numeric(one_year_df["High"]).max()
+        low_52_weeks = pd.to_numeric(one_year_df["Low"]).min()
+        return low_52_weeks, high_52_weeks
+
     
     def get_first_history_year(self) -> int:
         df = self.get_historical_data()
@@ -372,6 +383,7 @@ class RuStockTicker(MainTicker):
         self.secname = self.security.get('SECNAME')
         self.spread = self.security.get('SPREAD')
         self.previous_close = self.security.get('PREVLEGALCLOSEPRICE')
+        self.year_low, self.year_high = self.get_year_low_high()
 
     async def build_graph(self, period = None):
         data = await self.get_historical_data_async()
@@ -382,6 +394,14 @@ class RuStockTicker(MainTicker):
             data = data[(data.index >= start_date) & (data.index <= end_date)]
         return await build_graph(data['Close'], self.ticker_name)
 
+    def get_year_low_high(self):
+        df = self.get_historical_data()
+        start_date = datetime.today()
+        end_date = (start_date - timedelta(days=365))
+        one_year_df = df.loc[(df.index >= end_date) & (df.index <= start_date)]
+        high_52_weeks = pd.to_numeric(one_year_df["High"]).max()
+        low_52_weeks = pd.to_numeric(one_year_df["Low"]).min()
+        return low_52_weeks, high_52_weeks
 
     async def get_historical_data_async(self):
         data = await MoexApiHandler.get_share_history(self.ticker_name)
